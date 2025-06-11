@@ -22,7 +22,6 @@ library(shiny)
 library(stringr)
 # library(tibble)
 
-# Define server logic required to draw a histogram
 function(input, output, session) {
 
   #### Francisation ####
@@ -93,7 +92,7 @@ function(input, output, session) {
   ##### Collecte #####
   data_to_view <-
     stations %>% 
-    head(1) %>%
+    # head(2) %>%
     group_split(code_station) %>% 
     map(~ hydrologie.hubeau("tr", .$code_station, today() - days(profondeur_jours))) %>% 
     list_rbind()
@@ -112,31 +111,50 @@ function(input, output, session) {
     formatage.date.heure() %>% 
     formatage.time()
   
-  
-  ##### Ajout des données de référence #####
-  # data_to_add_v2 <-
-  #   data_to_add_v1 %>% 
-  #   left_join(stations %>% select(code_station, libelle_site), join_by(code_station))
-  
   #### Représentation graphique ####
-  contexte <- data_to_view_v2 %>% chronique.contexte()
+  figure <- function(data_to_view_v2){
+    contexte <- data_to_view_v2 %>% chronique.contexte()
+    
+    stations_avec_debits_long_station <-
+      stations_avec_debits_long %>% 
+      filter(code_station == contexte$station) %>% 
+      filter(Valeur >= contexte$valeur_min/(1+buffer_valeurs_reference)) %>% 
+      filter(Valeur <= contexte$valeur_max*(1+buffer_valeurs_reference))
+    
+    gg <- ggplot(data_to_view_v2, aes(time))
+    gg <- gg + geom_line(aes(y = chmes_valeur, colour = chmes_coderhj))
+    # gg <- gg + scale_x_date(date_labels = "%d %b") # Bug ?
+    gg <- gg + geom_hline(data = stations_avec_debits_long_station, aes(yintercept = Valeur, 
+                                                                        colour = Seuil))
+    gg <- gg + theme_minimal()
+    return(gg)
+  }
   
-  stations_avec_debits_long_station <-
-    stations_avec_debits_long %>% 
-    filter(code_station == contexte$station) %>% 
-    filter(Valeur >= contexte$valeur_min/(1+buffer_valeurs_reference)) %>% 
-    filter(Valeur <= contexte$valeur_max*(1+buffer_valeurs_reference))
+  # Liste des stations
+  stations_liste <- data_to_view_v2 %>% distinct(code_station) %>% pull(code_station)
   
-  gg <- ggplot(data_to_view_v2, aes(time))
-  gg <- gg + geom_line(aes(y = chmes_valeur, colour = chmes_coderhj))
-  # gg <- gg + scale_x_date(date_labels = "%d %b") # Bug ?
-  gg <- gg + geom_hline(data = stations_avec_debits_long_station, aes(yintercept = Valeur, 
-                                                                      colour = Seuil))
-  gg <- gg + theme_minimal()
-  
-  output$ggplot_debit <- renderPlot({
-    gg
+  # Génération dynamique des graphiques
+  output$plots <- renderUI({
+    # Utilisation de imap pour itérer sur les stations
+    plot_ui_list <- 
+      stations_liste %>% 
+      map(~ {
+        plotname <- paste0("plot_", .x)
+        plotOutput(plotname)
+      })
+    
+    # Combinaison des éléments de la liste en un seul objet tagList
+    tagList(plot_ui_list)
   })
   
+  # Création des graphiques individuels
+  data_to_view_v2 %>%
+    group_split(code_station) %>%
+    walk(~ {
+      plotname <- paste0("plot_", unique(.x$code_station))
+      output[[plotname]] <- renderPlot({
+        print(figure(.x))
+      })
+    })
   
 }

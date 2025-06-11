@@ -8,8 +8,10 @@ library(gt)
 library(lubridate)
 library(shiny)
 library(shinydashboard)
+library(sf)
 library(stringr)
 library(tibble)
+library(tidyverse)
 
 #### Éléments à afficher ####
 url_mail_perso <- a("Jean-Baptiste Fagot", href="mailto:jean-baptiste.fagot@peche-jura.com")
@@ -30,7 +32,7 @@ ui <- dashboardPage(
     tabItems(
       tabItem("tab_debits", 
               titlePanel("Débits en temps réel - Représentations graphiques"),
-              plotOutput("ggplot_debit", height=300)
+              uiOutput("plots")
       ), # Fin de tabItem
       tabItem("tab_shinyanki_sub_apropos", 
               titlePanel("Débits en temps réel - À propos"),
@@ -42,7 +44,7 @@ ui <- dashboardPage(
     fluidRow( # à rétablir mais fait planter l'application sans que je ne sache pourquoi
       column(
         width = 12,
-        h5(tagList("Version 0.0.1 de l'application, déployée le 10/06/2025 par ", url_mail_perso))
+        h5(tagList("Version 0.0.2 de l'application, déployée le 11/06/2025 par ", url_mail_perso))
 
       ) # Fermeture de column
     ) # Fermeture de fluidRow
