@@ -25,8 +25,9 @@ library(stringr)
 function(input, output, session) {
 
   #### Francisation ####
-  if(Sys.info()['sysname'] %>% str_replace("sysname", "") == "Darwin") Sys.setlocale("LC_TIME", "French") # OSX
-  if(Sys.info()['sysname'] %>% str_replace("sysname", "") == "Linux") Sys.setlocale("LC_TIME", "fr_FR.UTF-8") # Serveur linux
+  # if(Sys.info()['sysname'] %>% str_replace("sysname", "") == "Darwin") Sys.setlocale("LC_TIME", "French") # OSX
+  # if(Sys.info()['sysname'] %>% str_replace("sysname", "") == "Linux") Sys.setlocale("LC_TIME", "fr_FR.UTF-8") # Serveur linux
+  Sys.setlocale(locale="fr_FR.UTF-8")
   
   #### Menus ####
   # logo <- "FD39blanc.png"
@@ -56,6 +57,20 @@ function(input, output, session) {
     "https://raw.githubusercontent.com/jbfagotfede39/app_hydrologie/refs/heads/main/data/debits_references_39.csv" %>% 
     read_csv2() %>% 
     mutate(across(chsta_module:chsta_q300, as.numeric))
+  
+  ##### Palette des débits de référence #####
+  palette_debits_ref <-
+    c("QMNA5" = "#007db8",
+      "Module" = "#acd079",
+      "Q2" = "#458B00", 
+      "Q5" = "#FFFF00",
+      "Q10" = "#FFB90F", 
+      "Q20" = "#FF8C00", 
+      "Q30" = "#FF3030", 
+      "Q50" = "#B23AEE",
+      "Q100" = "#8B4513",
+      "Q300" = "#BABABA"
+    )
   
   ##### Stations #####
   stations <-
@@ -103,6 +118,10 @@ function(input, output, session) {
     filter(grandeur_hydro == "Q") %>% 
     # mutate(chmes_coderhj = glue("{libelle_site} - {code_station}")) %>% 
     mutate(chmes_coderhj = code_station) %>% 
+    left_join(stations_avec_debits_large %>% 
+                select(code_station, chsta_coderhj), 
+              join_by(chmes_coderhj == code_station)) %>% 
+    mutate(chmes_coderhj = chsta_coderhj, .keep = "unused") %>% 
     mutate(chmes_valeur = resultat_obs/1000) %>% 
     mutate(chmes_typemesure = "Hydrologie") %>% 
     mutate(chmes_unite = "m3/s") %>% 
@@ -117,16 +136,23 @@ function(input, output, session) {
     
     stations_avec_debits_long_station <-
       stations_avec_debits_long %>% 
-      filter(code_station == contexte$station) %>% 
+      filter(chsta_coderhj == contexte$station) %>% 
       filter(Valeur >= contexte$valeur_min/(1+buffer_valeurs_reference)) %>% 
       filter(Valeur <= contexte$valeur_max*(1+buffer_valeurs_reference))
     
     gg <- ggplot(data_to_view_v2, aes(time))
-    gg <- gg + geom_line(aes(y = chmes_valeur, colour = chmes_coderhj))
-    # gg <- gg + scale_x_date(date_labels = "%d %b") # Bug ?
-    gg <- gg + geom_hline(data = stations_avec_debits_long_station, aes(yintercept = Valeur, 
-                                                                        colour = Seuil))
+    gg <- gg + geom_line(aes(y = chmes_valeur), colour = "black")
+    # gg <- gg + scale_x_date(date_labels = "%a %d/%m")
+    gg <- gg + scale_x_datetime(date_labels = "%a %d/%m")
+    gg <- gg + geom_hline(data = stations_avec_debits_long_station, aes(yintercept = Valeur, colour = Seuil))
+    gg <- gg + geom_text(data = stations_avec_debits_long_station, aes(x = now() - days(8), y = 1.1*Valeur , label = Seuil, colour = Seuil), size = 4, fontface="bold")
     gg <- gg + theme_minimal()
+    gg <- gg + scale_colour_manual(values = palette_debits_ref)
+    # gg <- gg + theme(legend.position="none") # On supprime la légende
+    gg <- gg + labs(title = contexte$station)
+    gg <- gg + labs(x = NULL)
+    gg <- gg + labs(y = expression(paste("Débit m"^"3","/s")))
+    # gg <- gg + annotate()
     return(gg)
   }
   
