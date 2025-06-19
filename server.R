@@ -16,7 +16,7 @@ library(markdown)
 library(purrr)
 # library(readr)
 # library(readxl)
-# library(scales)
+library(scales)
 # library(sf)
 library(shiny)
 library(stringr)
@@ -107,7 +107,7 @@ function(input, output, session) {
   ##### Collecte #####
   data_to_view <-
     stations %>% 
-    # head(2) %>%
+    head(2) %>%
     group_split(code_station) %>% 
     map(~ hydrologie.hubeau("tr", .$code_station, today() - days(profondeur_jours))) %>% 
     list_rbind()
@@ -142,13 +142,13 @@ function(input, output, session) {
     
     gg <- ggplot(data_to_view_v2, aes(time))
     gg <- gg + geom_line(aes(y = chmes_valeur), colour = "black")
-    # gg <- gg + scale_x_date(date_labels = "%a %d/%m")
-    gg <- gg + scale_x_datetime(date_labels = "%a %d/%m")
     gg <- gg + geom_hline(data = stations_avec_debits_long_station, aes(yintercept = Valeur, colour = Seuil))
-    gg <- gg + geom_text(data = stations_avec_debits_long_station, aes(x = now() - days(8), y = 1.1*Valeur , label = Seuil, colour = Seuil), size = 4, fontface="bold")
+    gg <- gg + geom_text(data = stations_avec_debits_long_station, aes(x = now() - days(profondeur_jours), y = 1.1*Valeur , label = Seuil, colour = Seuil), size = 4, fontface="bold")
     gg <- gg + theme_minimal()
+    gg <- gg + xlim(now() - days(profondeur_jours), now())
+    gg <- gg + scale_x_datetime(date_breaks = "1 day", date_labels = "%a %d/%m")
     gg <- gg + scale_colour_manual(values = palette_debits_ref)
-    # gg <- gg + theme(legend.position="none") # On supprime la légende
+    gg <- gg + theme(legend.position="none") # On supprime la légende
     gg <- gg + labs(title = contexte$station)
     gg <- gg + labs(x = NULL)
     gg <- gg + labs(y = expression(paste("Débit m"^"3","/s")))

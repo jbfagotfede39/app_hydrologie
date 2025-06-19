@@ -1,4 +1,8 @@
 
+### 0.0.4 - 2025-06-19
+- Harmonisation des durées totales (alignement vertical) (close #17)
+- Ajout d'un trait vertical pour tous les jours (close #17)
+
 ### 0.0.3 - 2025-06-12
 - Complément du titre sur les représentations graphiques (close #3)
 - Correction de la légende de l'axe X (closes #1)
