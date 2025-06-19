@@ -107,7 +107,7 @@ function(input, output, session) {
   ##### Collecte #####
   data_to_view <-
     stations %>% 
-    head(2) %>%
+    # head(2) %>%
     group_split(code_station) %>% 
     map(~ hydrologie.hubeau("tr", .$code_station, today() - days(profondeur_jours))) %>% 
     list_rbind()
