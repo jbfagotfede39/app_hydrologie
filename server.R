@@ -17,7 +17,7 @@ library(purrr)
 # library(readr)
 # library(readxl)
 library(scales)
-# library(sf)
+library(sf)
 library(shiny)
 library(stringr)
 # library(tibble)
@@ -50,6 +50,7 @@ function(input, output, session) {
   departement_insee <- 39
   # buffer_valeurs_reference <- 0.5
   buffer_valeurs_reference <- 2
+  buffer_spatial <- 10000
   
   #### Données de référence ####
   ##### Débits de référence #####
@@ -72,13 +73,28 @@ function(input, output, session) {
       "Q300" = "#BABABA"
     )
   
+  ##### Départements #####
+  departements <- SIG.flux.wfs("https://data.geopf.fr/wfs/", "ADMINEXPRESS-COG.LATEST:departement")
+  departement <- departements %>% filter(insee_dep == departement_insee)
+  departement_buffer <- departement %>% st_buffer(buffer_spatial)
+  departements_limitrophes <- departements %>% st_filter(departement_buffer)
+  
   ##### Stations #####
   stations <-
-    hydrologie.hubeau.stations(departement_insee) %>% 
+    departements_limitrophes %>% 
+    group_split(insee_dep) %>% 
+    map(~ hydrologie.hubeau.stations(.$insee_dep)) %>% 
+    list_rbind() %>% 
     filter(en_service == TRUE) %>% 
-    filter(!grepl("EDF|Valouson", libelle_site)) # Sites EDF indisponibles en ligne
-  # view()
-  
+    filter(!grepl("EDF|Valouson", libelle_site)) %>% # Sites EDF indisponibles en ligne
+    filter(!grepl("V0415040", code_site)) %>% # Car bug
+    filter(!grepl("V1015030", code_site)) %>% # Car bug
+    filter(!grepl("V2444032", code_site)) %>% # Car bug
+    filter(code_projection == 26) %>% 
+    sf::st_as_sf(coords = c("coordonnee_x_station","coordonnee_y_station"), remove = F) %>%
+    st_set_crs(2154) %>%
+    st_filter(departement_buffer)
+
   stations_avec_debits_large <-
     stations %>% 
     select(code_site, code_station, libelle_site) %>% 
@@ -108,6 +124,7 @@ function(input, output, session) {
   data_to_view <-
     stations %>% 
     # head(2) %>%
+    # tail(3) %>%
     group_split(code_station) %>% 
     map(~ hydrologie.hubeau("tr", .$code_station, today() - days(profondeur_jours))) %>% 
     list_rbind()
@@ -122,7 +139,7 @@ function(input, output, session) {
                 select(code_station, chsta_coderhj), 
               join_by(chmes_coderhj == code_station)) %>% 
     mutate(chmes_coderhj = chsta_coderhj, .keep = "unused") %>% 
-    mutate(chmes_valeur = resultat_obs/1000) %>% 
+    mutate(chmes_valeur = resultat_obs/10000) %>% 
     mutate(chmes_typemesure = "Hydrologie") %>% 
     mutate(chmes_unite = "m3/s") %>% 
     # mutate(chmes_mo = "DREAL BFC") %>% # Ne fonctionne pas en l'état avec le contexte

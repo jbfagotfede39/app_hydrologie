@@ -1,4 +1,8 @@
 
+### 0.0.5 - 2025-06-23
+- Correction des débits d'un facteur 10
+- Ajout d'un buffer qui recherche les stations proches du département
+
 ### 0.0.4 - 2025-06-19
 - Harmonisation des durées totales (alignement vertical) (close #17)
 - Ajout d'un trait vertical pour tous les jours (close #17)
