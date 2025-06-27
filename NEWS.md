@@ -1,4 +1,7 @@
 
+### 0.0.6 - 2025-06-27
+- Remplacement de la variable `departement_insee` par `code_insee` dans la couche des départements issue du flux WFS
+
 ### 0.0.5 - 2025-06-23
 - Correction des débits d'un facteur 10
 - Ajout d'un buffer qui recherche les stations proches du département

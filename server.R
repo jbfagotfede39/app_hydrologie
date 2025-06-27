@@ -75,15 +75,15 @@ function(input, output, session) {
   
   ##### Départements #####
   departements <- SIG.flux.wfs("https://data.geopf.fr/wfs/", "ADMINEXPRESS-COG.LATEST:departement")
-  departement <- departements %>% filter(insee_dep == departement_insee)
+  departement <- departements %>% filter(code_insee == departement_insee)
   departement_buffer <- departement %>% st_buffer(buffer_spatial)
   departements_limitrophes <- departements %>% st_filter(departement_buffer)
   
   ##### Stations #####
   stations <-
     departements_limitrophes %>% 
-    group_split(insee_dep) %>% 
-    map(~ hydrologie.hubeau.stations(.$insee_dep)) %>% 
+    group_split(code_insee) %>% 
+    map(~ hydrologie.hubeau.stations(.$code_insee)) %>% 
     list_rbind() %>% 
     filter(en_service == TRUE) %>% 
     filter(!grepl("EDF|Valouson", libelle_site)) %>% # Sites EDF indisponibles en ligne
